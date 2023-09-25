@@ -1,0 +1,48 @@
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:image_picker/image_picker.dart';
+
+class GetAndSaveImage extends ChangeNotifier {
+  Uint8List? _imageBytes;
+
+  Uint8List? get imageBytes => _imageBytes;
+
+  final String _imageBoxName = 'userImage';
+
+  Future<void> pickAndConvertImage() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      final bytes = await image.readAsBytes();
+
+      final box = await Hive.openBox<Uint8List>(_imageBoxName);
+      final byte = Uint8List.fromList(bytes);
+      await box.put(_imageBoxName, byte); 
+      setImageBytes(byte);
+      box.close();
+        }
+  }
+
+  Future<void> getImage() async {
+    final box = await Hive.openBox<Uint8List>(_imageBoxName);
+    _imageBytes = box.get(_imageBoxName, defaultValue: null);
+    box.close();
+    notifyListeners();
+  }
+
+  Future<void> initialize() async {
+    await Hive.initFlutter();
+    await getImage();
+  }
+
+  GetAndSaveImage() {
+    initialize();
+  }
+
+  void setImageBytes(Uint8List byte){
+    _imageBytes = byte;
+    notifyListeners();
+  }
+}
